@@ -1,0 +1,24 @@
+.rebar3
+_build/
+deps/
+_checkouts
+_vendor
+.eunit
+*.o
+*.beam
+*.plt
+*.swp
+*.swo
+.erlang.cookie
+ebin
+log
+erl_crash.dump
+.rebar
+rebar.lock
+logs
+.idea
+*.iml
+rebar3.crashdump
+*~
+# macOS
+.DS_Store
