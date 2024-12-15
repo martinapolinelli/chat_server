@@ -34,7 +34,8 @@ init([]) ->
     },
     ChildSpecs = [
         {chat_server_miniclip_listener, {chat_server_miniclip_listener, start_link, []}, permanent, 5000, worker, [chat_server_miniclip_listener]},
-        {chat_server_miniclip_handler, {chat_server_miniclip_handler, start_link, []}, permanent, 5000, worker, [chat_server_miniclip_handler]}
+        {chat_server_miniclip_handler, {chat_server_miniclip_handler, start_link, []}, permanent, 5000, worker, [chat_server_miniclip_handler]},
+        {chat_server_miniclip_rooms, {chat_server_miniclip_rooms, start_link, []}, permanent, 5000, worker, [chat_server_miniclip_rooms]}
     ],
     {ok, {SupFlags, ChildSpecs}}.
 
