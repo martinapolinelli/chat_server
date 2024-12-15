@@ -1,17 +1,22 @@
 {application, chat_server_miniclip,
- [
+[
   {description, "Erlang chat server"},
-  {vsn, "0.1.0"},
+  {vsn, "0.2.0"},
   {registered, []},
   {mod, {chat_server_miniclip_app, []}},
   {applications, [
-                  kernel,
-                  stdlib,
-                  sasl
-                 ]},
+    kernel, 
+    stdlib, 
+    sasl
+  ]},
   {env, []},
-  {modules, []},
+  {modules, [
+    chat_server_miniclip_app,
+    chat_server_miniclip_sup,
+    chat_server_miniclip_listener,
+    chat_server_miniclip_handler,
+    chat_server_miniclip_users]},
   {licenses, ["MIT"]},
-  {maintainers, ["Martina"]},
+  {maintainers, ["Martina Polinelli"]},
   {links, []}
- ]}.
+]}.

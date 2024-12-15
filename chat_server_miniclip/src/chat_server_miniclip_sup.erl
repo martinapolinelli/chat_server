@@ -16,6 +16,7 @@
 start_link() ->
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
+
 %% sup_flags() = #{strategy => strategy(),         % optional
 %%                 intensity => non_neg_integer(), % optional
 %%                 period => pos_integer()}        % optional
@@ -27,11 +28,14 @@ start_link() ->
 %%                  modules => modules()}   % optional
 init([]) ->
     SupFlags = #{
-        strategy => one_for_all,
-        intensity => 0,
-        period => 1
+        strategy => one_for_one,
+        intensity => 3,
+        period => 10
     },
-    ChildSpecs = [],
+    ChildSpecs = [
+        {chat_server_miniclip_listener, {chat_server_miniclip_listener, start_link, []}, permanent, 5000, worker, [chat_server_miniclip_listener]},
+        {chat_server_miniclip_handler, {chat_server_miniclip_handler, start_link, []}, permanent, 5000, worker, [chat_server_miniclip_handler]}
+    ],
     {ok, {SupFlags, ChildSpecs}}.
 
 %% internal functions
