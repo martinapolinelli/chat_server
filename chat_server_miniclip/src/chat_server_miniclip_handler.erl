@@ -89,25 +89,38 @@ loop(Socket, UserName) ->
                     _ ->
                         send_response(Socket, "Failed to leave room.")
                 end;
-    
-                ["send", RoomName | Rest] ->
-                    io:format("LOG2: RoomName=~p, Rest=~p~n", [RoomName, Rest]),
-                    CleanRoomName = string:trim(RoomName),
-                    case Rest of
-                        [] ->
-                            send_response(Socket, "Error: No message provided.");
-                        _ ->
-                            Message = string:join(lists:map(fun string:trim/1, Rest), " "),
-                            case chat_server_miniclip_rooms:send_message(CleanRoomName, CleanUserName, Message) of
-                                ok ->
-                                    send_response(Socket, "Message successfully sent to room: " ++ CleanRoomName);
-                                {error, room_not_found} ->
-                                    send_response(Socket, "Room not found.");
-                                _ ->
-                                    send_response(Socket, "Failed to send message.")
+            
+            ["send", RoomName | Rest] ->
+                CleanRoomName = string:trim(RoomName),
+                case Rest of
+                    [] ->
+                        send_response(Socket, "Error: No message provided.");
+                    _ ->
+                        TrimmedRest = lists:map(
+                            fun(X) ->
+                                case is_binary(X) of
+                                    true -> binary_to_list(X);
+                                    false -> string:trim(X)
+                                end
+                            end,
+                            Rest
+                        ),
+                        ToSend = lists:foldl(fun(Elem, Acc) -> 
+                            case Acc of
+                                "" -> Elem;
+                                _ -> Acc ++ " " ++ Elem
                             end
-                    end;
-    
+                        end, "", TrimmedRest),
+                        case chat_server_miniclip_rooms:send_message(CleanRoomName, CleanUserName, ToSend) of
+                            ok ->
+                                send_response(Socket, "Message successfully sent to room: " ++ CleanRoomName);
+                            {error, room_not_found} ->
+                                send_response(Socket, "Room not found.");
+                            _ ->
+                                send_response(Socket, "Failed to send message.")
+                        end
+                end;
+
             ["send"] ->
                 send_response(Socket, "Invalid command. Use: send RoomName Message");
     

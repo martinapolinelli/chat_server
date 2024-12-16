@@ -89,17 +89,24 @@ send_message(RoomName, Sender, Message) ->
                 {reply, ok, State#{rooms => NewRooms}}
         end;
     
-    handle_call({send_message, RoomName, _Sender, Message}, _From, State) ->
+    handle_call({send_message, RoomNameRaw, _Sender, MessageRaw}, _From, State) ->
+        RoomName = string:trim(RoomNameRaw),
+        Message = string:trim(MessageRaw),
         Rooms = maps:get(rooms, State, #{}),
         case maps:get(RoomName, Rooms, undefined) of
             undefined ->
                 {reply, {error, room_not_found}, State};
             Room ->
                 Users = maps:get(users, Room, []),
-                lists:foreach(fun(User) ->
-                    io:format("Message to ~s: ~s~n", [User, Message])
-                end, Users),
-                {reply, ok, State}
+                case is_list(Users) andalso (is_list(Message) orelse is_binary(Message)) of
+                    true ->
+                        lists:foreach(fun(User) ->
+                            io:format("Message to ~s: ~s~n", [User, Message])
+                        end, Users),
+                        {reply, ok, State};
+                    false ->
+                        {reply, {error, invalid_data}, State}
+                end
         end;
     
     handle_call(_Request, _From, State) ->
