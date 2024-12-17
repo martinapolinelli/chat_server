@@ -28,4 +28,5 @@ _build/default/rel/chat_server_miniclip/bin/chat_server_miniclip console
 - list => List all available rooms
 - join <RoomName> => Join an existing room
 - leave <RoomName> => Leave the room
-- send <RoomName> <Message>	Send a message to the every user in the room.
+- send <RoomName> <Message>	Send a message to the every user in the room
+- send <UserName> <Message>	Send a private message

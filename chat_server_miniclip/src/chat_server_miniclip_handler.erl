@@ -15,7 +15,7 @@ start(Socket) ->
         {ok, NameData} ->
             UserNameRaw = binary_to_list(NameData),
             UserName = string:trim(UserNameRaw),
-            io:format("Connection Successful for user: ~s~n", [UserName]),
+            io:format("Connection successful for user: ~s~n", [UserName]),
             {ok, Pid} = chat_server_miniclip_handler:start_link(UserName),
             chat_server_miniclip_users:add_user(UserName, Pid, Socket),
             loop(Socket, UserName);
@@ -43,7 +43,6 @@ loop(Socket, UserName) ->
     handle_room_command(MessageRaw, UserName, Socket) ->
         Message = string:trim(MessageRaw),
         CleanUserName = string:trim(UserName),
-        io:format("LOG: ~p. data: ~s~n", [Message, CleanUserName]),
         case string:tokens(Message, " ") of
             ["create", RoomName] ->
                 CleanRoomName = string:trim(RoomName),
@@ -128,7 +127,6 @@ loop(Socket, UserName) ->
 
             %% Private message
             ["send_private", TargetUser | Tail] ->
-            io:format("LOG: Private message to ~p with data ~p~n", [TargetUser, Tail]),
             case Tail of
                 [] ->
                     send_response(Socket, "Error: No message provided.");
@@ -148,9 +146,6 @@ loop(Socket, UserName) ->
                             _ -> Acc ++ " " ++ Elem
                         end
                     end, "", TrimmedTail),
-                    io:format("LOG: FINAL PRIVATE MESSAGE: ~p~n", [PrivateMessage]),
-                    io:format("LOG: FINAL USER: ~p~n", [CleanUserName]),
-                    io:format("LOG: FINAL USER TARGET: ~p~n", [TargetUser]),
                     case chat_server_miniclip_users:send_private_message(CleanUserName, TargetUser, PrivateMessage) of
                         ok ->
                             send_response(Socket, "Private message sent to " ++ TargetUser ++ ".");
@@ -179,9 +174,7 @@ handle_cast(_Msg, State) ->
     {noreply, State}.
 
 handle_info({private_message, Sender, Message, Socket}, State) ->
-    io:format("LOG: Received private message from ~s: ~s~n", [Sender, Message]),
     gen_tcp:send(Socket, "Private message received from " ++ Sender ++ ": " ++ Message ++ "\n"),
     {noreply, State};
 handle_info(Unknown, State) ->
-    io:format("LOG: Unknown message received in handle_info: ~p~n", [Unknown]),
     {noreply, State}.
