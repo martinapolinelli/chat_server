@@ -2,17 +2,22 @@
 
 -behaviour(gen_server).
 
--export([start_link/0, start/1, init/1, loop/2, handle_call/3, handle_cast/2, disconnect/2]).
+-export([start_link/1, start/1, init/1, loop/2, handle_call/3, handle_cast/2, disconnect/2, handle_info/2]).
 
-start_link() ->
-    gen_server:start_link(?MODULE, [], []).
+start_link(UserName) ->
+    Name = list_to_atom("chat_handler_" ++ UserName),
+    {ok, Pid} = gen_server:start_link({local, Name}, ?MODULE, [], []),
+    {ok, Pid}.
 
 start(Socket) ->
+    send_response(Socket, "Insert your username to start:"),
     case gen_tcp:recv(Socket, 0) of
         {ok, NameData} ->
-            UserName = binary_to_list(NameData),
+            UserNameRaw = binary_to_list(NameData),
+            UserName = string:trim(UserNameRaw),
             io:format("Connection Successful for user: ~s~n", [UserName]),
-            chat_server_miniclip_users:add_user(UserName, self()),
+            {ok, Pid} = chat_server_miniclip_handler:start_link(UserName),
+            chat_server_miniclip_users:add_user(UserName, Pid, Socket),
             loop(Socket, UserName);
         {error, Reason} ->
             io:format("Error receiving user data: ~p~n", [Reason]),
@@ -121,9 +126,41 @@ loop(Socket, UserName) ->
                         end
                 end;
 
-            ["send"] ->
-                send_response(Socket, "Invalid command. Use: send RoomName Message");
-    
+            %% Private message
+            ["send_private", TargetUser | Tail] ->
+            io:format("LOG: Private message to ~p with data ~p~n", [TargetUser, Tail]),
+            case Tail of
+                [] ->
+                    send_response(Socket, "Error: No message provided.");
+                _ ->
+                    TrimmedTail = lists:map(
+                        fun(X) ->
+                            case is_binary(X) of
+                                true -> binary_to_list(X);
+                                false -> string:trim(X)
+                            end
+                        end,
+                        Tail
+                    ),
+                    PrivateMessage = lists:foldl(fun(Elem, Acc) -> 
+                        case Acc of
+                            "" -> Elem;
+                            _ -> Acc ++ " " ++ Elem
+                        end
+                    end, "", TrimmedTail),
+                    io:format("LOG: FINAL PRIVATE MESSAGE: ~p~n", [PrivateMessage]),
+                    io:format("LOG: FINAL USER: ~p~n", [CleanUserName]),
+                    io:format("LOG: FINAL USER TARGET: ~p~n", [TargetUser]),
+                    case chat_server_miniclip_users:send_private_message(CleanUserName, TargetUser, PrivateMessage) of
+                        ok ->
+                            send_response(Socket, "Private message sent to " ++ TargetUser ++ ".");
+                        {error, user_not_found} ->
+                            send_response(Socket, "User not found: " ++ TargetUser ++ ".");
+                        _ ->
+                            send_response(Socket, "Failed to send private message.")
+                    end
+            end;
+
             _ ->
                 send_response(Socket, "Unknown command.")
         end.
@@ -139,4 +176,12 @@ handle_call(_Request, _From, State) ->
     {reply, ok, State}.
 
 handle_cast(_Msg, State) ->
+    {noreply, State}.
+
+handle_info({private_message, Sender, Message, Socket}, State) ->
+    io:format("LOG: Received private message from ~s: ~s~n", [Sender, Message]),
+    gen_tcp:send(Socket, "Private message received from " ++ Sender ++ ": " ++ Message ++ "\n"),
+    {noreply, State};
+handle_info(Unknown, State) ->
+    io:format("LOG: Unknown message received in handle_info: ~p~n", [Unknown]),
     {noreply, State}.

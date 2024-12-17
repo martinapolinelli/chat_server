@@ -1,7 +1,7 @@
 {application, chat_server_miniclip,
 [
   {description, "Erlang chat server"},
-  {vsn, "0.3.0"},
+  {vsn, "0.4.0"},
   {registered, []},
   {mod, {chat_server_miniclip_app, []}},
   {applications, [
@@ -15,7 +15,8 @@
     chat_server_miniclip_sup,
     chat_server_miniclip_listener,
     chat_server_miniclip_handler,
-    chat_server_miniclip_users]},
+    chat_server_miniclip_users,
+    chat_server_miniclip_private_handler]},
   {licenses, ["MIT"]},
   {maintainers, ["Martina Polinelli"]},
   {links, []}
