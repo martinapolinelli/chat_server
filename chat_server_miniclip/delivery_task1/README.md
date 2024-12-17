@@ -25,10 +25,8 @@ _build/default/rel/chat_server_miniclip/bin/chat_server_miniclip console
 # Rooms Commands
 - create <RoomName> => Create a new room
 - destroy <RoomName> => Destroy an existing room (only the creator can)
-- list => List all available rooms (filtered)
+- list => List all available rooms
 - join <RoomName> => Join an existing room
 - leave <RoomName> => Leave the room
-- send <RoomName> <Message>	=> Send a message to the every user in the room
-- send <UserName> <Message> => Send a private message
-- private_room <RoomName> => Create a new private room
-- invite <RoomName> <GuestName> => Invite a guest to your private room
+- send <RoomName> <Message>	Send a message to the every user in the room
+- send <UserName> <Message>	Send a private message
