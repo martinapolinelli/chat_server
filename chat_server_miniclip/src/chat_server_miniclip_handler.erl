@@ -40,13 +40,13 @@ loop(Socket, UserName) ->
             disconnect(UserName, Socket)
     end.
 
-    handle_room_command(MessageRaw, UserName, Socket) ->
+    handle_room_command(MessageRaw, HostName, Socket) ->
         Message = string:trim(MessageRaw),
-        CleanUserName = string:trim(UserName),
+        CleanHostName = string:trim(HostName),
         case string:tokens(Message, " ") of
             ["create", RoomName] ->
                 CleanRoomName = string:trim(RoomName),
-                case chat_server_miniclip_rooms:create_room(CleanRoomName, CleanUserName) of
+                case chat_server_miniclip_rooms:create_room(CleanRoomName, CleanHostName, false) of
                     ok ->
                         send_response(Socket, "Room created with success.");
                     {error, room_exists} ->
@@ -57,7 +57,7 @@ loop(Socket, UserName) ->
     
             ["destroy", RoomName] ->
                 CleanRoomName = string:trim(RoomName),
-                case chat_server_miniclip_rooms:destroy_room(CleanRoomName, CleanUserName) of
+                case chat_server_miniclip_rooms:destroy_room(CleanRoomName, CleanHostName) of
                     ok ->
                         send_response(Socket, "Room destroyed successfully.");
                     {error, room_not_found} ->
@@ -69,12 +69,12 @@ loop(Socket, UserName) ->
                 end;
     
             ["list"] ->
-                Rooms = chat_server_miniclip_rooms:list_rooms(),
+                Rooms = chat_server_miniclip_rooms:list_rooms(CleanHostName),
                 send_response(Socket, "Available rooms: " ++ string:join(Rooms, ", "));
     
             ["join", RoomName] ->
                 CleanRoomName = string:trim(RoomName),
-                case chat_server_miniclip_rooms:join_room(CleanRoomName, CleanUserName) of
+                case chat_server_miniclip_rooms:join_room(CleanRoomName, CleanHostName) of
                     ok ->
                         send_response(Socket, "Success! Joined room: " ++ CleanRoomName);
                     {error, room_not_found} ->
@@ -85,7 +85,7 @@ loop(Socket, UserName) ->
     
             ["leave", RoomName] ->
                 CleanRoomName = string:trim(RoomName),
-                case chat_server_miniclip_rooms:leave_room(CleanRoomName, CleanUserName) of
+                case chat_server_miniclip_rooms:leave_room(CleanRoomName, CleanHostName) of
                     ok ->
                         send_response(Socket, "You successfully left the room: " ++ CleanRoomName);
                     {error, room_not_found} ->
@@ -115,7 +115,7 @@ loop(Socket, UserName) ->
                                 _ -> Acc ++ " " ++ Elem
                             end
                         end, "", TrimmedRest),
-                        case chat_server_miniclip_rooms:send_message(CleanRoomName, CleanUserName, ToSend) of
+                        case chat_server_miniclip_rooms:send_message(CleanRoomName, CleanHostName, ToSend) of
                             ok ->
                                 send_response(Socket, "Message successfully sent to room: " ++ CleanRoomName);
                             {error, room_not_found} ->
@@ -146,7 +146,7 @@ loop(Socket, UserName) ->
                             _ -> Acc ++ " " ++ Elem
                         end
                     end, "", TrimmedTail),
-                    case chat_server_miniclip_users:send_private_message(CleanUserName, TargetUser, PrivateMessage) of
+                    case chat_server_miniclip_users:send_private_message(CleanHostName, TargetUser, PrivateMessage) of
                         ok ->
                             send_response(Socket, "Private message sent to " ++ TargetUser ++ ".");
                         {error, user_not_found} ->
@@ -156,6 +156,31 @@ loop(Socket, UserName) ->
                     end
             end;
 
+            %% Private Rooms
+            ["private_room", RoomName] ->
+                CleanRoomName = string:trim(RoomName),
+                case chat_server_miniclip_rooms:create_room(CleanRoomName, CleanHostName, true) of
+                    ok ->
+                        send_response(Socket, "Private room created with success.");
+                    {error, room_exists} ->
+                        send_response(Socket, "Room already exists.");
+                    _ ->
+                        send_response(Socket, "Failed to create private room.")
+                end;
+
+            ["invite", RoomName, UserName] ->
+                CleanRoomName = string:trim(RoomName),
+                case chat_server_miniclip_rooms:invite_user(CleanRoomName, CleanHostName, UserName) of
+                    ok ->
+                        send_response(Socket, UserName ++ " invited to room " ++ CleanRoomName ++ ".");
+                    {error, room_not_found} ->
+                        send_response(Socket, "Room not found: " ++ CleanRoomName);
+                    {error, not_creator} ->
+                        send_response(Socket, "You are not the creator of the room: " ++ CleanRoomName);
+                    _ ->
+                        send_response(Socket, "Failed to invite user.")
+                end;
+
             _ ->
                 send_response(Socket, "Unknown command.")
         end.
@@ -164,7 +189,6 @@ send_response(Socket, Response) ->
     gen_tcp:send(Socket, Response ++ "\n").
 
 init(Socket) ->
-    io:format("Connection Successful~n"),
     {ok, #{socket => Socket, user => undefined}}.
 
 handle_call(_Request, _From, State) ->
@@ -175,6 +199,4 @@ handle_cast(_Msg, State) ->
 
 handle_info({private_message, Sender, Message, Socket}, State) ->
     gen_tcp:send(Socket, "Private message received from " ++ Sender ++ ": " ++ Message ++ "\n"),
-    {noreply, State};
-handle_info(Unknown, State) ->
     {noreply, State}.
